@@ -4,10 +4,14 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
+import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [activeContentType, setActiveContentType] = useState('text');
   const [generating, setGenerating] = useState(false);
+  const [prompt, setPrompt] = useState('');
+  const [result, setResult] = useState<any>(null);
+  const { toast } = useToast();
 
   const contentTypes = [
     { id: 'text', name: 'Текст', icon: 'FileText', color: 'from-purple-500 to-pink-500' },
@@ -50,9 +54,74 @@ const Index = () => {
     { icon: 'TrendingUp', title: 'Масштабируемость', description: 'От стартапа до enterprise без ограничений' },
   ];
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!prompt.trim()) {
+      toast({
+        title: "Ошибка",
+        description: "Введите запрос для генерации",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setGenerating(true);
-    setTimeout(() => setGenerating(false), 2000);
+    setResult(null);
+
+    try {
+      if (activeContentType === 'image') {
+        const response = await fetch('https://api.poehali.dev/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
+
+        if (!response.ok) throw new Error('Ошибка генерации');
+
+        const data = await response.json();
+        setResult({ type: 'image', url: data.url });
+        
+        toast({
+          title: "Готово!",
+          description: "Изображение успешно сгенерировано",
+        });
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        const demoResults: Record<string, any> = {
+          text: {
+            type: 'text',
+            content: `Сгенерированный текст на основе запроса: "${prompt}"\n\nЭто демо-режим. Подключите OpenAI API для реальной генерации текста с помощью GPT-4.`
+          },
+          video: {
+            type: 'video',
+            content: 'Генерация видео (демо-режим). Подключите API для создания реальных видео.'
+          },
+          audio: {
+            type: 'audio',
+            content: 'Генерация аудио (демо-режим). Подключите ElevenLabs или OpenAI Whisper.'
+          },
+          code: {
+            type: 'code',
+            content: `// Сгенерированный код\nfunction example() {\n  console.log("${prompt}");\n  return "Демо-режим";\n}`
+          }
+        };
+
+        setResult(demoResults[activeContentType]);
+        
+        toast({
+          title: "Демо-режим",
+          description: "Для реальной генерации подключите API",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось сгенерировать контент",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (
@@ -114,6 +183,8 @@ const Index = () => {
                 className="w-full p-4 bg-slate-950 border border-purple-500/30 rounded-lg text-white placeholder:text-gray-500 focus:border-purple-500 focus:outline-none transition-colors"
                 rows={4}
                 placeholder="Например: Создай описание продукта для умных часов с функцией мониторинга здоровья..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
               />
             </div>
             <Button
@@ -133,6 +204,62 @@ const Index = () => {
                 </>
               )}
             </Button>
+
+            {result && (
+              <Card className="max-w-4xl mx-auto mt-8 p-8 bg-slate-900/50 border-purple-500/20 backdrop-blur animate-fade-in">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Icon name="CheckCircle" className="text-green-400" size={24} />
+                    Результат
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setResult(null)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <Icon name="X" size={20} />
+                  </Button>
+                </div>
+
+                {result.type === 'image' && (
+                  <div className="space-y-4">
+                    <img
+                      src={result.url}
+                      alt="Generated"
+                      className="w-full rounded-lg border border-purple-500/30"
+                    />
+                    <Button
+                      variant="outline"
+                      className="w-full border-purple-500/50 text-white hover:bg-purple-500/10"
+                      onClick={() => window.open(result.url, '_blank')}
+                    >
+                      <Icon name="Download" className="mr-2" size={16} />
+                      Скачать изображение
+                    </Button>
+                  </div>
+                )}
+
+                {result.type === 'text' && (
+                  <div className="bg-slate-950 p-6 rounded-lg border border-purple-500/30">
+                    <p className="text-gray-300 whitespace-pre-wrap">{result.content}</p>
+                  </div>
+                )}
+
+                {result.type === 'code' && (
+                  <div className="bg-slate-950 p-6 rounded-lg border border-purple-500/30">
+                    <pre className="text-purple-300 font-mono text-sm overflow-x-auto">{result.content}</pre>
+                  </div>
+                )}
+
+                {(result.type === 'video' || result.type === 'audio') && (
+                  <div className="bg-slate-950 p-6 rounded-lg border border-purple-500/30 text-center">
+                    <Icon name="Info" className="mx-auto mb-3 text-purple-400" size={32} />
+                    <p className="text-gray-300">{result.content}</p>
+                  </div>
+                )}
+              </Card>
+            )}
           </Card>
         </div>
       </section>
