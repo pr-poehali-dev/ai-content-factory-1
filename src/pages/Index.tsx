@@ -68,51 +68,38 @@ const Index = () => {
     setResult(null);
 
     try {
-      if (activeContentType === 'image') {
-        const response = await fetch('https://api.poehali.dev/generate-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt }),
-        });
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const demoResults: Record<string, any> = {
+        text: {
+          type: 'text',
+          content: `Сгенерированный текст на основе запроса: "${prompt}"\n\nЭто демо-режим. Подключите OpenAI API для реальной генерации текста с помощью GPT-4.`
+        },
+        image: {
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?w=800&h=600&fit=crop',
+          demo: true
+        },
+        video: {
+          type: 'video',
+          content: 'Генерация видео (демо-режим). Подключите API для создания реальных видео.'
+        },
+        audio: {
+          type: 'audio',
+          content: 'Генерация аудио (демо-режим). Подключите ElevenLabs или OpenAI Whisper.'
+        },
+        code: {
+          type: 'code',
+          content: `// Сгенерированный код\nfunction example() {\n  console.log("${prompt}");\n  return "Демо-режим";\n}`
+        }
+      };
 
-        if (!response.ok) throw new Error('Ошибка генерации');
-
-        const data = await response.json();
-        setResult({ type: 'image', url: data.url });
-        
-        toast({
-          title: "Готово!",
-          description: "Изображение успешно сгенерировано",
-        });
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const demoResults: Record<string, any> = {
-          text: {
-            type: 'text',
-            content: `Сгенерированный текст на основе запроса: "${prompt}"\n\nЭто демо-режим. Подключите OpenAI API для реальной генерации текста с помощью GPT-4.`
-          },
-          video: {
-            type: 'video',
-            content: 'Генерация видео (демо-режим). Подключите API для создания реальных видео.'
-          },
-          audio: {
-            type: 'audio',
-            content: 'Генерация аудио (демо-режим). Подключите ElevenLabs или OpenAI Whisper.'
-          },
-          code: {
-            type: 'code',
-            content: `// Сгенерированный код\nfunction example() {\n  console.log("${prompt}");\n  return "Демо-режим";\n}`
-          }
-        };
-
-        setResult(demoResults[activeContentType]);
-        
-        toast({
-          title: "Демо-режим",
-          description: "Для реальной генерации подключите API",
-        });
-      }
+      setResult(demoResults[activeContentType]);
+      
+      toast({
+        title: "Демо-режим",
+        description: "Для реальной генерации подключите API ключи",
+      });
     } catch (error) {
       toast({
         title: "Ошибка",
@@ -224,11 +211,18 @@ const Index = () => {
 
                 {result.type === 'image' && (
                   <div className="space-y-4">
-                    <img
-                      src={result.url}
-                      alt="Generated"
-                      className="w-full rounded-lg border border-purple-500/30"
-                    />
+                    <div className="relative">
+                      <img
+                        src={result.url}
+                        alt="Generated"
+                        className="w-full rounded-lg border border-purple-500/30"
+                      />
+                      {result.demo && (
+                        <div className="absolute top-4 right-4 bg-purple-500/90 text-white px-3 py-1 rounded-lg text-sm font-medium">
+                          Демо
+                        </div>
+                      )}
+                    </div>
                     <Button
                       variant="outline"
                       className="w-full border-purple-500/50 text-white hover:bg-purple-500/10"
